@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
-use crate::game::{Mark, TicTacToe};
+use crate::game::{GameKind, GameSession, Mark};
 use crate::protocol::{
     GameStatePayload, LobbyRoomSummary, PlayerPayload, RoomStatePayload, ServerMessage,
 };
@@ -37,7 +37,8 @@ pub struct Room {
     pub players: Vec<Player>,
     pub phase: RoomPhase,
     pub max_players: usize,
-    pub game: Option<TicTacToe>,
+    pub game_kind: GameKind,
+    pub game: Option<GameSession>,
 }
 
 impl Room {
@@ -55,6 +56,7 @@ impl Room {
             host_nickname,
             player_count: self.players.len(),
             max_players: self.max_players,
+            game_kind: self.game_kind,
         }
     }
 
@@ -63,18 +65,26 @@ impl Room {
     }
 
     pub fn state_payload(&self) -> RoomStatePayload {
-        let marks: HashMap<Uuid, Mark> = self
-            .game
-            .as_ref()
-            .map(|g| {
-                [
-                    (g.x_player_id, Mark::X),
-                    (g.o_player_id, Mark::O),
-                ]
+        let marks: HashMap<Uuid, Mark> = match &self.game {
+            Some(GameSession::TicTacToe(g)) => [(g.x_player_id, Mark::X), (g.o_player_id, Mark::O)]
                 .into_iter()
-                .collect()
-            })
-            .unwrap_or_default();
+                .collect(),
+            _ => HashMap::new(),
+        };
+
+        let colors: HashMap<Uuid, String> = match &self.game {
+            Some(GameSession::OnMars(om)) => om
+                .players
+                .iter()
+                .map(|p| {
+                    (
+                        p.id,
+                        format!("{:?}", p.color).to_lowercase(),
+                    )
+                })
+                .collect(),
+            _ => HashMap::new(),
+        };
 
         RoomStatePayload {
             id: self.id,
@@ -82,6 +92,7 @@ impl Room {
             phase: self.phase,
             host_id: self.host_id,
             max_players: self.max_players,
+            game_kind: self.game_kind,
             players: self
                 .players
                 .iter()
@@ -90,19 +101,26 @@ impl Room {
                     nickname: p.nickname.clone(),
                     mark: marks.get(&p.id).copied(),
                     is_host: p.id == self.host_id,
+                    color: colors.get(&p.id).cloned(),
                 })
                 .collect(),
         }
     }
 
     pub fn game_payload(&self) -> Option<GameStatePayload> {
-        self.game.as_ref().map(|g| GameStatePayload {
-            board: g.board,
-            turn: g.turn,
-            winner: g.winner,
-            x_player_id: g.x_player_id,
-            o_player_id: g.o_player_id,
-        })
+        match &self.game {
+            Some(GameSession::TicTacToe(g)) => Some(GameStatePayload::TicTacToe {
+                board: g.board,
+                turn: g.turn,
+                winner: g.winner,
+                x_player_id: g.x_player_id,
+                o_player_id: g.o_player_id,
+            }),
+            Some(GameSession::OnMars(om)) => Some(GameStatePayload::OnMars {
+                state: om.clone(),
+            }),
+            None => None,
+        }
     }
 
     pub fn broadcast(&self, msg: &ServerMessage) {
@@ -135,14 +153,23 @@ pub struct ConnectionMeta {
 #[derive(Default)]
 pub struct AppInner {
     pub rooms: HashMap<Uuid, Room>,
-    /// player_id -> connection sender (for lobby broadcasts + reconnect)
     pub connections: HashMap<Uuid, Tx>,
     pub metas: HashMap<Uuid, ConnectionMeta>,
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct AppState {
     pub inner: Arc<Mutex<AppInner>>,
+    pub test_session: Arc<Mutex<crate::test_session::TestSession>>,
+}
+
+impl Default for AppState {
+    fn default() -> Self {
+        Self {
+            inner: Arc::new(Mutex::new(AppInner::default())),
+            test_session: Arc::new(Mutex::new(crate::test_session::load_from_disk())),
+        }
+    }
 }
 
 impl AppState {

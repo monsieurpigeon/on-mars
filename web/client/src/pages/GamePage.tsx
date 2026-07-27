@@ -6,30 +6,28 @@ import {
 } from "../lib/store";
 import { useVoiceChat } from "../lib/voice";
 import { VoiceControls } from "../components/VoiceControls";
-
+import type { TicTacToeState } from "../protocol";
 function cellLabel(cell: string) {
   if (cell === "x") return "X";
   if (cell === "o") return "O";
   return "";
 }
 
-export function GamePage() {
+function TicTacToePage({ game }: { game: TicTacToeState }) {
   const playerId = useGameStore((s) => s.playerId);
   const room = useGameStore((s) => s.room);
-  const game = useGameStore((s) => s.game);
   const error = useGameStore((s) => s.error);
-
+  const devMode = useGameStore((s) => s.devMode);
   const peerId = room?.players.find((p) => p.id !== playerId)?.id ?? null;
-  const voice = useVoiceChat(peerId, Boolean(room && game));
+  const voice = useVoiceChat(peerId, !devMode && Boolean(room));
 
-  if (!room || !game) return null;
+  if (!room) return null;
 
   const myMark =
     game.x_player_id === playerId ? "x" : game.o_player_id === playerId ? "o" : null;
   const isMyTurn = myMark === game.turn && !game.winner;
   const isHost = room.host_id === playerId;
   const finished = Boolean(game.winner);
-
   const xName = room.players.find((p) => p.id === game.x_player_id)?.nickname ?? "X";
   const oName = room.players.find((p) => p.id === game.o_player_id)?.nickname ?? "O";
 
@@ -44,13 +42,8 @@ export function GamePage() {
         <p className="brand">On Mars</p>
         <h1>{room.name}</h1>
         <p className="lede status-line">{statusText}</p>
-        <p className="muted">
-          {xName} (X) · {oName} (O)
-          {myMark ? ` · tu joues ${myMark.toUpperCase()}` : ""}
-        </p>
       </header>
-
-      <div className={`board ${isMyTurn ? "active-turn" : ""}`} role="grid" aria-label="Grille morpion">
+      <div className={`board ${isMyTurn ? "active-turn" : ""}`} role="grid">
         {game.board.map((cell, index) => (
           <button
             key={index}
@@ -63,31 +56,35 @@ export function GamePage() {
           </button>
         ))}
       </div>
-
       <VoiceControls voice={voice} peerReady={Boolean(peerId)} />
-
-      {finished && (
-        <div className="actions">
-          {isHost && (
-            <button type="button" className="btn primary" onClick={() => rematch()}>
-              Rejouer
-            </button>
-          )}
-          <button type="button" className="btn" onClick={() => backToLobby()}>
-            Retour au lobby
+      <div className="actions">
+        {finished && isHost && (
+          <button type="button" className="btn primary" onClick={() => rematch()}>
+            Rejouer
           </button>
-        </div>
-      )}
-
-      {!finished && (
-        <div className="actions">
-          <button type="button" className="btn" onClick={() => backToLobby()}>
-            Abandonner
-          </button>
-        </div>
-      )}
-
+        )}
+        <button type="button" className="btn" onClick={() => backToLobby()}>
+          Retour au lobby
+        </button>
+      </div>
       {error && <p className="error">{error}</p>}
     </div>
   );
+}
+
+export function GamePage() {
+  const game = useGameStore((s) => s.game);
+  if (!game) return null;
+  if (game.kind === "on_mars") {
+    return (
+      <div className="page">
+        <header className="brand-block compact">
+          <p className="brand">On Mars</p>
+          <h1>En reconstruction</h1>
+          <p className="lede">UI en cours sur <code>/test</code>.</p>
+        </header>
+      </div>
+    );
+  }
+  return <TicTacToePage game={game} />;
 }

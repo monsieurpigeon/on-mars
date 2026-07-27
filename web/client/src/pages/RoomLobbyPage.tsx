@@ -8,19 +8,23 @@ export function RoomLobbyPage() {
   const error = useGameStore((s) => s.error);
 
   const peerId = room?.players.find((p) => p.id !== playerId)?.id ?? null;
-  const voice = useVoiceChat(peerId, Boolean(room && room.players.length === 2));
+  const devMode = useGameStore((s) => s.devMode);
+  const voice = useVoiceChat(peerId, !devMode && Boolean(room && room.players.length >= 2));
 
   if (!room) return null;
 
   const isHost = room.host_id === playerId;
   const canStart = isHost && room.players.length >= 2;
+  const gameLabel = room.game_kind === "on_mars" ? "On Mars" : "Morpion";
 
   return (
     <div className="page">
       <header className="brand-block">
         <p className="brand">On Mars</p>
         <h1>{room.name}</h1>
-        <p className="lede">En attente des joueurs…</p>
+        <p className="lede">
+          {gameLabel} · en attente ({room.players.length}/{room.max_players})
+        </p>
       </header>
 
       <section className="panel">

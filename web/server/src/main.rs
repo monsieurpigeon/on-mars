@@ -1,12 +1,13 @@
 mod game;
 mod protocol;
 mod state;
+mod test_session;
 mod ws;
 
 use std::net::SocketAddr;
 use std::path::PathBuf;
 
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::Router;
 use state::AppState;
 use tower_http::cors::{Any, CorsLayer};
@@ -33,6 +34,38 @@ async fn main() {
     let mut app = Router::new()
         .route("/health", get(|| async { "ok" }))
         .route("/ws", get(ws::ws_handler))
+        .route(
+            "/api/test-session",
+            get(test_session::get_test_session).put(test_session::put_test_session),
+        )
+        .route(
+            "/api/test-session/reset",
+            post(test_session::reset_test_session),
+        )
+        .route(
+            "/api/test-session/lss",
+            post(test_session::update_lss_level),
+        )
+        .route(
+            "/api/test-session/lss/level-up",
+            post(test_session::level_up_lss_endpoint),
+        )
+        .route(
+            "/api/test-session/resources",
+            post(test_session::update_player_resource),
+        )
+        .route(
+            "/api/test-session/missions",
+            post(test_session::update_mission_tracker),
+        )
+        .route(
+            "/api/test-session/orbit-bank/take",
+            post(test_session::take_orbit_bank_item),
+        )
+        .route(
+            "/api/test-session/orbit-bank/reload",
+            post(test_session::reload_orbit_bank_endpoint),
+        )
         .layer(
             CorsLayer::new()
                 .allow_origin(Any)

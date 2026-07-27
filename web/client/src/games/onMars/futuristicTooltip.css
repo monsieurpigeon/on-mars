@@ -1,0 +1,86 @@
+.om-tooltip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+/* Porté sur document.body — hors overflow des parents */
+.om-tooltip-bubble {
+  position: fixed;
+  z-index: 2147483647;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  white-space: nowrap;
+  padding: 0.35rem 0.55rem 0.35rem 0.65rem;
+  color: var(--sand, #e8d2b0);
+  font-family: var(--font-display, "Space Grotesk", sans-serif);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.06), transparent 40%),
+    rgba(10, 6, 4, 0.94);
+  border: 1px solid color-mix(in srgb, var(--view-player, #e4572e) 55%, rgba(232, 210, 176, 0.35));
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.45),
+    0 8px 22px rgba(0, 0, 0, 0.45),
+    0 0 18px color-mix(in srgb, var(--view-player, #e4572e) 18%, transparent);
+  transition: opacity 140ms ease, visibility 140ms ease;
+}
+
+.om-tooltip-bubble.is-ready {
+  opacity: 1;
+  visibility: visible;
+}
+
+.om-tooltip-frame {
+  position: absolute;
+  inset: 3px;
+  border: 1px solid color-mix(in srgb, var(--view-player, #e4572e) 28%, transparent);
+  clip-path: inherit;
+  pointer-events: none;
+}
+
+.om-tooltip-text {
+  position: relative;
+  display: block;
+}
+
+.om-tooltip-bubble::before {
+  content: "";
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: var(--view-player, #e4572e);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--view-player, #e4572e) 70%, transparent);
+}
+
+.om-tooltip-bubble[data-side="left"]::before {
+  right: -3px;
+  top: 50%;
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.om-tooltip-bubble[data-side="right"]::before {
+  left: -3px;
+  top: 50%;
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.om-tooltip-bubble[data-side="top"]::before {
+  bottom: -3px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.om-tooltip-bubble[data-side="bottom"]::before {
+  top: -3px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+}

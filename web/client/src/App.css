@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600;700&display=swap");
 
 :root {
   --bg0: #140c08;
@@ -13,6 +13,17 @@
   --danger: #ff6b6b;
   --font-display: "Space Grotesk", sans-serif;
   --font-body: "IBM Plex Sans", sans-serif;
+  /* Police unique pour tous les compteurs / quantités */
+  --font-counter: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+/** Toujours cette classe (ou var(--font-counter)) pour les compteurs. */
+.om-count {
+  font-family: var(--font-counter);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  line-height: 1;
 }
 
 * {
@@ -294,5 +305,242 @@ input {
 @media (max-width: 420px) {
   .app-shell {
     padding: 1.25rem 1rem 2rem;
+  }
+}
+
+.test-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: min(220px, 100%) minmax(0, 1fr);
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+.test-toolbar {
+  border-right: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.35);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  position: sticky;
+  top: 0;
+  align-self: start;
+  max-height: 100vh;
+  overflow: auto;
+}
+
+.test-toolbar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.test-scene-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.test-frame-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-top: 0.5rem;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.22);
+  cursor: pointer;
+  font-size: 0.88rem;
+}
+
+.test-frame-toggle input {
+  accent-color: var(--ember);
+  width: 1rem;
+  height: 1rem;
+}
+
+.test-frame-hint {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.test-screenshot-btn {
+  margin-top: 0.35rem;
+  width: 100%;
+}
+
+.test-screenshot-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.test-save-flash {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--player-lime, #d4ff3a);
+}
+
+.map-editor-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.map-editor-hint {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.map-editor-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.map-editor-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dust);
+}
+
+.map-editor-seg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.map-editor-seg .btn {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.78rem;
+  padding: 0.35rem 0.4rem;
+}
+
+.map-editor-stats {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--sand);
+}
+
+.map-editor-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.map-editor-actions .btn {
+  width: 100%;
+  font-size: 0.8rem;
+}
+
+.test-stage {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(0, 0, 0, 0.35), transparent 50%),
+    rgba(0, 0, 0, 0.25);
+}
+
+.test-game-frame {
+  width: 100%;
+  height: 100%;
+  max-width: 1280px;
+  max-height: 800px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  background: #120b08;
+}
+
+.test-stage.is-macbook .test-game-frame {
+  width: min(1280px, 100%);
+  height: min(800px, calc(100vh - 2rem));
+  aspect-ratio: 1280 / 800;
+}
+
+/* Verrouillage exact pendant la capture (1:1 avec le PNG 1280×800) */
+.test-game-frame.is-capturing-macbook {
+  position: relative !important;
+  width: 1280px !important;
+  height: 800px !important;
+  max-width: 1280px !important;
+  max-height: 800px !important;
+  min-width: 1280px !important;
+  min-height: 800px !important;
+  aspect-ratio: auto !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+  transform: none !important;
+  zoom: 1 !important;
+}
+
+.test-game-frame.is-capturing-macbook .om-screen {
+  width: 1280px !important;
+  height: 800px !important;
+  max-width: 1280px !important;
+  max-height: 800px !important;
+}
+
+.test-stage.is-fullscreen {
+  padding: 0;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+.test-stage.is-fullscreen .test-game-frame {
+  width: min(100%, 1280px);
+  height: min(100vh, 800px);
+  max-width: 1280px;
+  max-height: 800px;
+  min-height: 0;
+  margin: 0 auto;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.test-stage.is-fullscreen .om-screen {
+  max-width: 1280px;
+  max-height: 800px;
+}
+
+@media (max-width: 1100px) {
+  .test-shell {
+    grid-template-columns: min(200px, 28vw) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .test-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .test-toolbar {
+    position: static;
+    max-height: none;
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .test-stage.is-macbook .test-game-frame {
+    aspect-ratio: auto;
+    height: min(800px, 70vh);
   }
 }

@@ -1,0 +1,10 @@
+docs/
+.git/
+**/.git/
+client/node_modules/
+client/dist/
+server/target/
+*.log
+.env
+.env.*
+README.md

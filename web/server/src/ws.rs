@@ -7,7 +7,7 @@ use futures_util::{SinkExt, StreamExt};
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
-use crate::game::TicTacToe;
+use crate::game::{GameKind, GameSession};
 use crate::protocol::{ClientMessage, ServerMessage};
 use crate::state::{AppState, ConnectionMeta, Player, Room, RoomPhase};
 
@@ -103,8 +103,13 @@ fn handle_client_message(
             }
             Ok(())
         }
-        ClientMessage::CreateRoom { name } => {
+        ClientMessage::CreateRoom {
+            name,
+            game_kind,
+            max_players,
+        } => {
             let name = sanitize_room_name(&name)?;
+            let max_players = game_kind.clamp_max_players(max_players);
             let room_id = Uuid::new_v4();
 
             {
@@ -130,7 +135,8 @@ fn handle_client_message(
                         tx,
                     }],
                     phase: RoomPhase::Waiting,
-                    max_players: 2,
+                    max_players,
+                    game_kind,
                     game: None,
                 };
                 let payload = room.state_payload();
@@ -203,17 +209,22 @@ fn handle_client_message(
             if room.host_id != player_id {
                 return Err(("not_host", "Seul l'hôte peut démarrer"));
             }
-            if room.players.len() < 2 {
-                return Err(("not_enough_players", "Il faut 2 joueurs"));
+            let min_players = match room.game_kind {
+                GameKind::TicTacToe => 2,
+                GameKind::OnMars => 2,
+            };
+            if room.players.len() < min_players {
+                return Err(("not_enough_players", "Pas assez de joueurs"));
             }
             if room.phase != RoomPhase::Waiting && room.phase != RoomPhase::Finished {
                 return Err(("bad_phase", "La partie a déjà commencé"));
             }
 
-            let p0 = room.players[0].id;
-            let p1 = room.players[1].id;
-            // Host is X if host is first, else keep seating order: first joiner X
-            room.game = Some(TicTacToe::new(p0, p1));
+            let ids: Vec<_> = room.players.iter().map(|p| p.id).collect();
+            let names: Vec<_> = room.players.iter().map(|p| p.nickname.clone()).collect();
+            let session = GameSession::start(room.game_kind, &ids, &names)
+                .map_err(|e| ("start_failed", e))?;
+            room.game = Some(session);
             room.phase = RoomPhase::Playing;
 
             let room_state = ServerMessage::RoomState {
@@ -237,13 +248,42 @@ fn handle_client_message(
             if room.phase != RoomPhase::Playing {
                 return Err(("bad_phase", "La partie n'est pas en cours"));
             }
-            let Some(game) = room.game.as_mut() else {
-                return Err(("no_game", "Pas de partie"));
+            let Some(GameSession::TicTacToe(game)) = room.game.as_mut() else {
+                return Err(("no_game", "Pas une partie de morpion"));
             };
             game.place(player_id, index)
                 .map_err(|e| ("illegal_move", e))?;
 
             if game.winner.is_some() {
+                room.phase = RoomPhase::Finished;
+            }
+
+            let room_state = ServerMessage::RoomState {
+                room: room.state_payload(),
+            };
+            let game_state = ServerMessage::GameState {
+                game: room.game_payload().unwrap(),
+            };
+            room.broadcast(&room_state);
+            room.broadcast(&game_state);
+            Ok(())
+        }
+        ClientMessage::OnMarsAction { action } => {
+            let mut inner = state.inner.lock();
+            let room_id = room_id_or_err(&inner, player_id)?;
+            let Some(room) = inner.rooms.get_mut(&room_id) else {
+                return Err(("not_found", "Partie introuvable"));
+            };
+            if room.phase != RoomPhase::Playing {
+                return Err(("bad_phase", "La partie n'est pas en cours"));
+            }
+            let Some(GameSession::OnMars(game)) = room.game.as_mut() else {
+                return Err(("no_game", "Pas une partie On Mars"));
+            };
+            game.apply(player_id, action)
+                .map_err(|e| ("illegal_action", e))?;
+
+            if matches!(game.phase, crate::game::on_mars::OmPhase::GameEnd) {
                 room.phase = RoomPhase::Finished;
             }
 
@@ -267,16 +307,21 @@ fn handle_client_message(
                 return Err(("not_host", "Seul l'hôte peut relancer"));
             }
             if room.players.len() < 2 {
-                return Err(("not_enough_players", "Il faut 2 joueurs"));
+                return Err(("not_enough_players", "Il faut au moins 2 joueurs"));
             }
-            if let Some(game) = room.game.as_mut() {
-                // Swap marks for rematch variety
-                std::mem::swap(&mut game.x_player_id, &mut game.o_player_id);
-                game.reset();
-            } else {
-                let p0 = room.players[0].id;
-                let p1 = room.players[1].id;
-                room.game = Some(TicTacToe::new(p0, p1));
+            match room.game.as_mut() {
+                Some(GameSession::TicTacToe(game)) => {
+                    std::mem::swap(&mut game.x_player_id, &mut game.o_player_id);
+                    game.reset();
+                }
+                _ => {
+                    let ids: Vec<_> = room.players.iter().map(|p| p.id).collect();
+                    let names: Vec<_> = room.players.iter().map(|p| p.nickname.clone()).collect();
+                    room.game = Some(
+                        GameSession::start(room.game_kind, &ids, &names)
+                            .map_err(|e| ("start_failed", e))?,
+                    );
+                }
             }
             room.phase = RoomPhase::Playing;
             let room_state = ServerMessage::RoomState {

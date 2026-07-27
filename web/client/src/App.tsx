@@ -2,9 +2,10 @@ import { useGameStore, useSocketLifecycle } from "./lib/store";
 import { HomePage } from "./pages/HomePage";
 import { RoomLobbyPage } from "./pages/RoomLobbyPage";
 import { GamePage } from "./pages/GamePage";
+import { TestPage } from "./pages/TestPage";
 import "./App.css";
 
-export default function App() {
+function LiveApp() {
   useSocketLifecycle();
   const room = useGameStore((s) => s.room);
   const game = useGameStore((s) => s.game);
@@ -17,4 +18,12 @@ export default function App() {
   }
 
   return <div className="app-shell">{screen}</div>;
+}
+
+export default function App() {
+  const path = window.location.pathname.replace(/\/+$/, "") || "/";
+  if (path === "/test") {
+    return <TestPage />;
+  }
+  return <LiveApp />;
 }

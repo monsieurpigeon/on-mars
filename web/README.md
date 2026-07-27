@@ -14,6 +14,7 @@ Morpion multijoueur en ligne : lobby public, jeu synchronisé (WebSocket), chat 
 - VPS Hostinger : `82.25.112.116`
 - URL temporaire HTTPS : https://82.25.112.116.sslip.io
 - Fichiers sur le serveur : `/opt/on-mars`
+- Jeux : **On Mars** (2–4 joueurs) + morpion (test)
 - Stack : `docker compose up -d --build` (game + Caddy)
 
 Pour un vrai domaine plus tard : pointer un enregistrement A vers l’IP, mettre à jour `Caddyfile`, puis `docker compose up -d`.
@@ -36,6 +37,8 @@ pnpm dev
 ```
 
 Ouvre http://localhost:5173
+
+Sandbox UI (sans lobby / WS) : http://localhost:5173/test
 
 ## Docker (prod-like)
 
