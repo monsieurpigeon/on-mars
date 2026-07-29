@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
-use crate::game::{GameKind, GameSession, Mark};
+use crate::game::{GameKind, GameSession};
 use crate::protocol::{
     GameStatePayload, LobbyRoomSummary, PlayerPayload, RoomStatePayload, ServerMessage,
 };
@@ -65,25 +65,13 @@ impl Room {
     }
 
     pub fn state_payload(&self) -> RoomStatePayload {
-        let marks: HashMap<Uuid, Mark> = match &self.game {
-            Some(GameSession::TicTacToe(g)) => [(g.x_player_id, Mark::X), (g.o_player_id, Mark::O)]
-                .into_iter()
-                .collect(),
-            _ => HashMap::new(),
-        };
-
         let colors: HashMap<Uuid, String> = match &self.game {
             Some(GameSession::OnMars(om)) => om
                 .players
                 .iter()
-                .map(|p| {
-                    (
-                        p.id,
-                        format!("{:?}", p.color).to_lowercase(),
-                    )
-                })
+                .map(|p| (p.id, format!("{:?}", p.color).to_lowercase()))
                 .collect(),
-            _ => HashMap::new(),
+            None => HashMap::new(),
         };
 
         RoomStatePayload {
@@ -99,7 +87,6 @@ impl Room {
                 .map(|p| PlayerPayload {
                     id: p.id,
                     nickname: p.nickname.clone(),
-                    mark: marks.get(&p.id).copied(),
                     is_host: p.id == self.host_id,
                     color: colors.get(&p.id).cloned(),
                 })
@@ -109,13 +96,6 @@ impl Room {
 
     pub fn game_payload(&self) -> Option<GameStatePayload> {
         match &self.game {
-            Some(GameSession::TicTacToe(g)) => Some(GameStatePayload::TicTacToe {
-                board: g.board,
-                turn: g.turn,
-                winner: g.winner,
-                x_player_id: g.x_player_id,
-                o_player_id: g.o_player_id,
-            }),
             Some(GameSession::OnMars(om)) => Some(GameStatePayload::OnMars {
                 state: om.clone(),
             }),
@@ -160,14 +140,14 @@ pub struct AppInner {
 #[derive(Clone)]
 pub struct AppState {
     pub inner: Arc<Mutex<AppInner>>,
-    pub test_session: Arc<Mutex<crate::test_session::TestSession>>,
+    pub test_session: Arc<Mutex<crate::on_mars::TestSession>>,
 }
 
 impl Default for AppState {
     fn default() -> Self {
         Self {
             inner: Arc::new(Mutex::new(AppInner::default())),
-            test_session: Arc::new(Mutex::new(crate::test_session::load_from_disk())),
+            test_session: Arc::new(Mutex::new(crate::on_mars::load_from_disk())),
         }
     }
 }

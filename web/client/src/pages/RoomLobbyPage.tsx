@@ -15,7 +15,6 @@ export function RoomLobbyPage() {
 
   const isHost = room.host_id === playerId;
   const canStart = isHost && room.players.length >= 2;
-  const gameLabel = room.game_kind === "on_mars" ? "On Mars" : "Morpion";
 
   return (
     <div className="page">
@@ -23,7 +22,7 @@ export function RoomLobbyPage() {
         <p className="brand">On Mars</p>
         <h1>{room.name}</h1>
         <p className="lede">
-          {gameLabel} · en attente ({room.players.length}/{room.max_players})
+          On Mars · en attente ({room.players.length}/{room.max_players})
         </p>
       </header>
 

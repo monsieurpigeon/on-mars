@@ -1,5 +1,4 @@
 import { useState, type FormEvent } from "react";
-import type { GameKind } from "../protocol";
 import {
   clearError,
   createRoom,
@@ -14,7 +13,6 @@ export function HomePage() {
   const error = useGameStore((s) => s.error);
   const [nameInput, setNameInput] = useState(nickname);
   const [roomName, setRoomName] = useState("");
-  const [gameKind, setGameKind] = useState<GameKind>("on_mars");
   const [maxPlayers, setMaxPlayers] = useState(2);
 
   function ensureNick(value: string) {
@@ -29,8 +27,7 @@ export function HomePage() {
     clearError();
     if (!ensureNick(nameInput)) return;
     if (!roomName.trim()) return;
-    const max = gameKind === "tic_tac_toe" ? 2 : maxPlayers;
-    createRoom(roomName.trim(), gameKind, max);
+    createRoom(roomName.trim(), "on_mars", maxPlayers);
   }
 
   function onJoin(roomId: string) {
@@ -64,28 +61,16 @@ export function HomePage() {
         <h2>Créer une partie</h2>
         <form className="stack" onSubmit={onCreate}>
           <label className="field">
-            <span>Jeu</span>
+            <span>Joueurs (2–4)</span>
             <select
-              value={gameKind}
-              onChange={(e) => setGameKind(e.target.value as GameKind)}
+              value={maxPlayers}
+              onChange={(e) => setMaxPlayers(Number(e.target.value))}
             >
-              <option value="on_mars">On Mars</option>
-              <option value="tic_tac_toe">Morpion (test)</option>
+              <option value={2}>2</option>
+              <option value={3}>3</option>
+              <option value={4}>4</option>
             </select>
           </label>
-          {gameKind === "on_mars" && (
-            <label className="field">
-              <span>Joueurs (2–4)</span>
-              <select
-                value={maxPlayers}
-                onChange={(e) => setMaxPlayers(Number(e.target.value))}
-              >
-                <option value={2}>2</option>
-                <option value={3}>3</option>
-                <option value={4}>4</option>
-              </select>
-            </label>
-          )}
           <label className="field">
             <span>Nom de la salle</span>
             <input
@@ -113,8 +98,7 @@ export function HomePage() {
                   <strong>{room.name}</strong>
                   <span className="muted">
                     {" "}
-                    · {room.game_kind === "on_mars" ? "On Mars" : "Morpion"} · {room.host_nickname} ·{" "}
-                    {room.player_count}/{room.max_players}
+                    · On Mars · {room.host_nickname} · {room.player_count}/{room.max_players}
                   </span>
                 </div>
                 <button

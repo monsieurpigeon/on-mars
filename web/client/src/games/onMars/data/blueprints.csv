@@ -1,0 +1,25 @@
+numero,classe,nom,ressource
+1,1,construction yard,minerai
+2,1,metal deposit,minerai
+3,1,automated production,energie
+4,1,wind turbines,energie
+5,1,moisture vaporator,eau
+6,1,private ship,eau
+7,1,biomarket,plante
+8,1,hydroponic farm,plante
+9,1,concentrator,oxygene
+10,1,oxygen tank,oxygene
+11,1,casino,abri
+12,1,gym,abri
+13,3,biolab,minerai
+14,3,mineral mine,minerai
+15,3,builder drone ai600,energie
+16,3,radar,energie
+17,3,aqueduct,eau
+18,3,research lab,eau
+19,3,eco resort,plante
+20,3,trade market,plante
+21,3,aerial elevator,oxygene
+22,3,recycling bots,oxygene
+23,3,command center,abri
+24,3,library,abri

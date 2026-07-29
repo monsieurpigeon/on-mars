@@ -455,6 +455,11 @@ input {
     rgba(0, 0, 0, 0.25);
 }
 
+.test-game-frame-shell {
+  min-width: 0;
+  min-height: 0;
+}
+
 .test-game-frame {
   width: 100%;
   height: 100%;
@@ -467,41 +472,72 @@ input {
   background: #120b08;
 }
 
-.test-stage.is-macbook .test-game-frame {
-  width: min(1280px, 100%);
-  height: min(800px, calc(100vh - 2rem));
-  aspect-ratio: 1280 / 800;
+/*
+ * MacBook : layout toujours 1280×800 (même que le PNG).
+ * Seul un scale CSS adapte l’aperçu — pas de reflow à la capture.
+ */
+.test-stage.is-macbook {
+  --om-frame-scale: 1;
 }
 
-/* Verrouillage exact pendant la capture (1:1 avec le PNG 1280×800) */
+.test-stage.is-macbook .test-game-frame-shell {
+  width: calc(1280px * var(--om-frame-scale));
+  height: calc(800px * var(--om-frame-scale));
+  position: relative;
+  flex-shrink: 0;
+}
+
+.test-stage.is-macbook .test-game-frame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1280px;
+  height: 800px;
+  max-width: none;
+  max-height: none;
+  transform: scale(var(--om-frame-scale, 1));
+  transform-origin: top left;
+}
+
+/* Capture : chrome déco retiré — le scale d’aperçu n’est plus muté (SnapDOM outerTransforms:false) */
 .test-game-frame.is-capturing-macbook {
-  position: relative !important;
-  width: 1280px !important;
-  height: 800px !important;
-  max-width: 1280px !important;
-  max-height: 800px !important;
-  min-width: 1280px !important;
-  min-height: 800px !important;
-  aspect-ratio: auto !important;
   border: none !important;
   border-radius: 0 !important;
   box-shadow: none !important;
-  overflow: hidden !important;
-  transform: none !important;
-  zoom: 1 !important;
 }
 
 .test-game-frame.is-capturing-macbook .om-screen {
   width: 1280px !important;
   height: 800px !important;
-  max-width: 1280px !important;
-  max-height: 800px !important;
+  max-width: none !important;
+  max-height: none !important;
+}
+
+/* foreignObject gère mal backdrop-filter / blur */
+.test-game-frame.is-capturing-macbook .om-map-corner,
+.test-game-frame.is-capturing-macbook .om-hex-mars-atmosphere,
+.test-game-frame.is-capturing-macbook .om-hex-hud-frame {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.test-game-frame.is-capturing-macbook .om-hex-svg {
+  max-width: none !important;
 }
 
 .test-stage.is-fullscreen {
   padding: 0;
   align-items: stretch;
   justify-content: stretch;
+}
+
+.test-stage.is-fullscreen .test-game-frame-shell {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .test-stage.is-fullscreen .test-game-frame {
@@ -539,8 +575,4 @@ input {
     border-bottom: 1px solid var(--line);
   }
 
-  .test-stage.is-macbook .test-game-frame {
-    aspect-ratio: auto;
-    height: min(800px, 70vh);
-  }
 }

@@ -1,8 +1,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::game::on_mars::{OnMarsAction, OnMarsState};
-use crate::game::{Cell, GameKind, Mark, Winner};
+use crate::game::{GameKind, OnMarsStub};
 use crate::state::RoomPhase;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -11,7 +10,7 @@ pub enum ClientMessage {
     SetNickname { nickname: String },
     CreateRoom {
         name: String,
-        #[serde(default = "default_ttt")]
+        #[serde(default = "default_on_mars")]
         game_kind: GameKind,
         #[serde(default = "default_max")]
         max_players: usize,
@@ -19,16 +18,14 @@ pub enum ClientMessage {
     JoinRoom { room_id: Uuid },
     LeaveRoom,
     StartGame,
-    PlaceMark { index: u8 },
-    OnMarsAction { action: OnMarsAction },
     Rematch,
     BackToLobby,
     Reconnect { player_id: Uuid },
     RtcSignal { target: Uuid, payload: serde_json::Value },
 }
 
-fn default_ttt() -> GameKind {
-    GameKind::TicTacToe
+fn default_on_mars() -> GameKind {
+    GameKind::OnMars
 }
 fn default_max() -> usize {
     2
@@ -73,7 +70,6 @@ pub struct LobbyRoomSummary {
 pub struct PlayerPayload {
     pub id: Uuid,
     pub nickname: String,
-    pub mark: Option<Mark>,
     pub is_host: bool,
     pub color: Option<String>,
 }
@@ -92,14 +88,7 @@ pub struct RoomStatePayload {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum GameStatePayload {
-    TicTacToe {
-        board: [Cell; 9],
-        turn: Mark,
-        winner: Option<Winner>,
-        x_player_id: Uuid,
-        o_player_id: Uuid,
-    },
     OnMars {
-        state: OnMarsState,
+        state: OnMarsStub,
     },
 }

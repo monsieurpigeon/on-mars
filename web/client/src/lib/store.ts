@@ -3,7 +3,6 @@ import type {
   GameKind,
   GameStatePayload,
   LobbyRoomSummary,
-  OnMarsAction,
   RoomStatePayload,
   ServerMessage,
 } from "../protocol";
@@ -146,39 +145,6 @@ export function leaveRoom() {
 export function startGame() {
   if (store.devMode) return;
   gameSocket.send({ type: "start_game" });
-}
-
-export function placeMark(index: number) {
-  if (store.devMode) {
-    const game = store.game;
-    if (!game || game.kind !== "tic_tac_toe" || game.winner) return;
-    if (game.board[index] !== "empty") return;
-    const board = [...game.board];
-    board[index] = game.turn;
-    const nextTurn = game.turn === "x" ? "o" : "x";
-    setStore({
-      game: { ...game, board: board as typeof game.board, turn: nextTurn },
-    });
-    return;
-  }
-  gameSocket.send({ type: "place_mark", index });
-}
-
-export function sendOnMarsAction(action: OnMarsAction) {
-  if (store.devMode) {
-    const game = store.game;
-    if (!game || game.kind !== "on_mars") return;
-    const log = [...game.state.log, `[dev] ${action.type}`].slice(-12);
-    setStore({
-      game: {
-        kind: "on_mars",
-        state: { ...game.state, log },
-      },
-      error: null,
-    });
-    return;
-  }
-  gameSocket.send({ type: "on_mars_action", action });
 }
 
 export function rematch() {

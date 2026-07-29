@@ -65,9 +65,16 @@ export function clampLssLevel(level: number): number {
   return Math.min(LSS_MAX, Math.max(LSS_MIN, Math.round(level)));
 }
 
-/** Capacité de portage par ressource = niveau LSS + 1. */
-export function carryCapacity(lssLevel: number): number {
-  return clampLssLevel(lssLevel) + 1;
+/** Capacité de base du stock perso (indépendante du LSS). */
+export const CARRY_BASE_CAPACITY = 2;
+
+/** Capacité de portage = base + abris installés (le LSS n’ajoute plus de slots). */
+export function carryCapacity(sheltersInstalled = 0): number {
+  const shelters =
+    typeof sheltersInstalled === "number" && Number.isFinite(sheltersInstalled)
+      ? Math.max(0, Math.round(sheltersInstalled))
+      : 0;
+  return CARRY_BASE_CAPACITY + shelters;
 }
 
 export type CarryChangeResult =
@@ -81,22 +88,21 @@ export type CarryChangeResult =
 
 /**
  * Routine de gestion du portage joueur (slots ressources).
- * Seuil max = carryCapacity(lssLevel) — tout ajout au-dessus est refusé.
- *
- * Point d’extension pour règles futures (coût, stock RH, missions, etc.).
+ * Seuil max = carryCapacity(sheltersInstalled) — autorité serveur.
  */
 export function resolveCarrySlotInteraction(input: {
-  lssLevel: number;
+  /** Abris installés — bonus de slots (renvoyé par le serveur). */
+  sheltersInstalled?: number;
   currentAmount: number;
   /** Index 0-based du slot cliqué (0 = premier jeton). */
   slotIndex: number;
 }): CarryChangeResult {
-  const capacity = carryCapacity(input.lssLevel);
+  const capacity = carryCapacity(input.sheltersInstalled ?? 0);
   const current = Math.max(0, Math.round(input.currentAmount));
   const slotIndex = Math.max(0, Math.round(input.slotIndex));
   const target = slotIndex + 1;
 
-  // Refus strict : slot hors capacité LSS
+  // Refus strict : slot hors capacité
   if (target > capacity || slotIndex >= capacity) {
     return {
       ok: false,

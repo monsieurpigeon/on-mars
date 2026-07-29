@@ -1,7 +1,7 @@
 mod game;
 mod protocol;
 mod state;
-mod test_session;
+mod on_mars;
 mod ws;
 
 use std::net::SocketAddr;
@@ -36,35 +36,79 @@ async fn main() {
         .route("/ws", get(ws::ws_handler))
         .route(
             "/api/test-session",
-            get(test_session::get_test_session).put(test_session::put_test_session),
+            get(on_mars::get_test_session).put(on_mars::put_test_session),
         )
         .route(
             "/api/test-session/reset",
-            post(test_session::reset_test_session),
+            post(on_mars::reset_test_session),
         )
         .route(
             "/api/test-session/lss",
-            post(test_session::update_lss_level),
+            post(on_mars::update_lss_level),
         )
         .route(
             "/api/test-session/lss/level-up",
-            post(test_session::level_up_lss_endpoint),
+            post(on_mars::level_up_lss_endpoint),
+        )
+        .route(
+            "/api/test-session/lss/advance-resource",
+            post(on_mars::advance_lss_resource_endpoint),
+        )
+        .route(
+            "/api/test-session/lss/place-player-token",
+            post(on_mars::place_lss_player_token_endpoint),
+        )
+        .route(
+            "/api/test-session/shelters/install",
+            post(on_mars::install_shelter_endpoint),
+        )
+        .route(
+            "/api/test-session/shelters/place-colon",
+            post(on_mars::place_colon_endpoint),
+        )
+        .route(
+            "/api/test-session/shelters/send-to-work",
+            post(on_mars::send_colon_to_work_endpoint),
+        )
+        .route(
+            "/api/test-session/shelters/recall-workers",
+            post(on_mars::recall_working_colonists_endpoint),
         )
         .route(
             "/api/test-session/resources",
-            post(test_session::update_player_resource),
+            post(on_mars::update_player_resource),
         )
         .route(
             "/api/test-session/missions",
-            post(test_session::update_mission_tracker),
+            post(on_mars::update_mission_tracker),
         )
         .route(
             "/api/test-session/orbit-bank/take",
-            post(test_session::take_orbit_bank_item),
+            post(on_mars::take_orbit_bank_item),
+        )
+        .route(
+            "/api/test-session/blueprints/take",
+            post(on_mars::take_blueprint_card),
+        )
+        .route(
+            "/api/test-session/scientists/take",
+            post(on_mars::take_scientist_card),
         )
         .route(
             "/api/test-session/orbit-bank/reload",
-            post(test_session::reload_orbit_bank_endpoint),
+            post(on_mars::reload_orbit_bank_endpoint),
+        )
+        .route(
+            "/api/test-session/rovers/move",
+            post(on_mars::move_rover_endpoint),
+        )
+        .route(
+            "/api/test-session/techs/take",
+            post(on_mars::take_tech_tile),
+        )
+        .route(
+            "/api/test-session/techs/advance",
+            post(on_mars::advance_tech_tile),
         )
         .layer(
             CorsLayer::new()

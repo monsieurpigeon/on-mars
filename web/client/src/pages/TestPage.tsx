@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import { captureMacbookPng } from "../lib/captureMacbook";
+import { useEffect, useRef, useState } from "react";
+import { captureMacbookPng, MACBOOK_H, MACBOOK_W } from "../lib/captureMacbook";
 import {
   getBundledBaseMap,
   loadBaseMap,
@@ -23,7 +23,39 @@ export function TestPage() {
   const [resetting, setResetting] = useState(false);
   const [reloadingBank, setReloadingBank] = useState(false);
   const [orbitBankReloadSignal, setOrbitBankReloadSignal] = useState(0);
+  const stageRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
+
+  /** Aperçu MacBook : layout fixe 1280×800, scale CSS pour rentrer dans la scène. */
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage || !macbookFrame) {
+      stage?.style.removeProperty("--om-frame-scale");
+      return;
+    }
+
+    function syncScale() {
+      const s = stageRef.current;
+      if (!s) return;
+      const pad = 8;
+      const scale = Math.min(
+        (s.clientWidth - pad) / MACBOOK_W,
+        (s.clientHeight - pad) / MACBOOK_H,
+        1,
+      );
+      s.style.setProperty("--om-frame-scale", String(scale));
+    }
+
+    syncScale();
+    const ro = new ResizeObserver(syncScale);
+    ro.observe(stage);
+    window.addEventListener("resize", syncScale);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", syncScale);
+      stage.style.removeProperty("--om-frame-scale");
+    };
+  }, [macbookFrame]);
 
   async function handleResetSession() {
     if (resetting) return;
@@ -145,8 +177,8 @@ export function TestPage() {
         </button>
         <p className="muted test-frame-hint">
           {macbookFrame
-            ? "Cadre 1280×800 — décocher pour plein écran responsive."
-            : "Plein écran responsive dans la zone de test."}
+            ? "Capture SnapDOM 1280×800 (même layout que l’aperçu, sans reflow)."
+            : "Plein écran — le screenshot force 1280×800."}
         </p>
         <button
           type="button"
@@ -158,15 +190,20 @@ export function TestPage() {
         </button>
       </aside>
 
-      <div className={`test-stage ${macbookFrame ? "is-macbook" : "is-fullscreen"}`}>
-        <div ref={frameRef} className="test-game-frame">
-          <OnMarsPage
-            key={sessionEpoch}
-            map={map}
-            editMap={editMap}
-            onMapChange={setMap}
-            orbitBankReloadSignal={orbitBankReloadSignal}
-          />
+      <div
+        ref={stageRef}
+        className={`test-stage ${macbookFrame ? "is-macbook" : "is-fullscreen"}`}
+      >
+        <div className="test-game-frame-shell">
+          <div ref={frameRef} className="test-game-frame">
+            <OnMarsPage
+              key={sessionEpoch}
+              map={map}
+              editMap={editMap}
+              onMapChange={setMap}
+              orbitBankReloadSignal={orbitBankReloadSignal}
+            />
+          </div>
         </div>
       </div>
     </div>

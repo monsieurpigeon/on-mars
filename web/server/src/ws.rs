@@ -7,7 +7,7 @@ use futures_util::{SinkExt, StreamExt};
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
-use crate::game::{GameKind, GameSession};
+use crate::game::GameSession;
 use crate::protocol::{ClientMessage, ServerMessage};
 use crate::state::{AppState, ConnectionMeta, Player, Room, RoomPhase};
 
@@ -209,11 +209,7 @@ fn handle_client_message(
             if room.host_id != player_id {
                 return Err(("not_host", "Seul l'hôte peut démarrer"));
             }
-            let min_players = match room.game_kind {
-                GameKind::TicTacToe => 2,
-                GameKind::OnMars => 2,
-            };
-            if room.players.len() < min_players {
+            if room.players.len() < 2 {
                 return Err(("not_enough_players", "Pas assez de joueurs"));
             }
             if room.phase != RoomPhase::Waiting && room.phase != RoomPhase::Finished {
@@ -239,64 +235,6 @@ fn handle_client_message(
             state.broadcast_lobby();
             Ok(())
         }
-        ClientMessage::PlaceMark { index } => {
-            let mut inner = state.inner.lock();
-            let room_id = room_id_or_err(&inner, player_id)?;
-            let Some(room) = inner.rooms.get_mut(&room_id) else {
-                return Err(("not_found", "Partie introuvable"));
-            };
-            if room.phase != RoomPhase::Playing {
-                return Err(("bad_phase", "La partie n'est pas en cours"));
-            }
-            let Some(GameSession::TicTacToe(game)) = room.game.as_mut() else {
-                return Err(("no_game", "Pas une partie de morpion"));
-            };
-            game.place(player_id, index)
-                .map_err(|e| ("illegal_move", e))?;
-
-            if game.winner.is_some() {
-                room.phase = RoomPhase::Finished;
-            }
-
-            let room_state = ServerMessage::RoomState {
-                room: room.state_payload(),
-            };
-            let game_state = ServerMessage::GameState {
-                game: room.game_payload().unwrap(),
-            };
-            room.broadcast(&room_state);
-            room.broadcast(&game_state);
-            Ok(())
-        }
-        ClientMessage::OnMarsAction { action } => {
-            let mut inner = state.inner.lock();
-            let room_id = room_id_or_err(&inner, player_id)?;
-            let Some(room) = inner.rooms.get_mut(&room_id) else {
-                return Err(("not_found", "Partie introuvable"));
-            };
-            if room.phase != RoomPhase::Playing {
-                return Err(("bad_phase", "La partie n'est pas en cours"));
-            }
-            let Some(GameSession::OnMars(game)) = room.game.as_mut() else {
-                return Err(("no_game", "Pas une partie On Mars"));
-            };
-            game.apply(player_id, action)
-                .map_err(|e| ("illegal_action", e))?;
-
-            if matches!(game.phase, crate::game::on_mars::OmPhase::GameEnd) {
-                room.phase = RoomPhase::Finished;
-            }
-
-            let room_state = ServerMessage::RoomState {
-                room: room.state_payload(),
-            };
-            let game_state = ServerMessage::GameState {
-                game: room.game_payload().unwrap(),
-            };
-            room.broadcast(&room_state);
-            room.broadcast(&game_state);
-            Ok(())
-        }
         ClientMessage::Rematch => {
             let mut inner = state.inner.lock();
             let room_id = room_id_or_err(&inner, player_id)?;
@@ -309,20 +247,12 @@ fn handle_client_message(
             if room.players.len() < 2 {
                 return Err(("not_enough_players", "Il faut au moins 2 joueurs"));
             }
-            match room.game.as_mut() {
-                Some(GameSession::TicTacToe(game)) => {
-                    std::mem::swap(&mut game.x_player_id, &mut game.o_player_id);
-                    game.reset();
-                }
-                _ => {
-                    let ids: Vec<_> = room.players.iter().map(|p| p.id).collect();
-                    let names: Vec<_> = room.players.iter().map(|p| p.nickname.clone()).collect();
-                    room.game = Some(
-                        GameSession::start(room.game_kind, &ids, &names)
-                            .map_err(|e| ("start_failed", e))?,
-                    );
-                }
-            }
+            let ids: Vec<_> = room.players.iter().map(|p| p.id).collect();
+            let names: Vec<_> = room.players.iter().map(|p| p.nickname.clone()).collect();
+            room.game = Some(
+                GameSession::start(room.game_kind, &ids, &names)
+                    .map_err(|e| ("start_failed", e))?,
+            );
             room.phase = RoomPhase::Playing;
             let room_state = ServerMessage::RoomState {
                 room: room.state_payload(),
@@ -345,11 +275,13 @@ fn handle_client_message(
             Ok(())
         }
         ClientMessage::Reconnect { player_id: old_id } => {
-            // Transfer connection identity to previous player id when possible
             let mut inner = state.inner.lock();
-            if !inner.metas.contains_key(&old_id) && !inner.rooms.values().any(|r| {
-                r.players.iter().any(|p| p.id == old_id)
-            }) {
+            if !inner.metas.contains_key(&old_id)
+                && !inner
+                    .rooms
+                    .values()
+                    .any(|r| r.players.iter().any(|p| p.id == old_id))
+            {
                 return Err(("reconnect_failed", "Session expirée"));
             }
 
@@ -373,7 +305,6 @@ fn handle_client_message(
                     );
                 }
 
-                // Re-attach tx to room player
                 let room_id = inner.metas.get(&old_id).and_then(|m| m.room_id);
                 if let Some(room_id) = room_id {
                     if let Some(room) = inner.rooms.get_mut(&room_id) {
@@ -428,7 +359,6 @@ fn leave_room(state: &AppState, player_id: Uuid) {
     }
 
     let mut remove_room = false;
-    let mut host_changed = false;
     if let Some(room) = inner.rooms.get_mut(&room_id) {
         room.players.retain(|p| p.id != player_id);
         if room.players.is_empty() {
@@ -436,14 +366,11 @@ fn leave_room(state: &AppState, player_id: Uuid) {
         } else {
             if room.host_id == player_id {
                 room.host_id = room.players[0].id;
-                host_changed = true;
             }
-            // If mid-game and someone left, finish / reset to waiting
             if room.phase == RoomPhase::Playing || room.phase == RoomPhase::Finished {
                 room.phase = RoomPhase::Waiting;
                 room.game = None;
             }
-            let _ = host_changed;
             let room_state = ServerMessage::RoomState {
                 room: room.state_payload(),
             };
@@ -460,8 +387,6 @@ fn cleanup_disconnect(state: &AppState, player_id: Uuid) {
     {
         let mut inner = state.inner.lock();
         inner.connections.remove(&player_id);
-        // Keep meta briefly for reconnect? For MVP remove; reconnect needs room still holding player
-        // Actually leave_room already removed from room. Clear meta.
         inner.metas.remove(&player_id);
     }
     state.broadcast_lobby();
